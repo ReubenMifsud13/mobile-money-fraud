@@ -1,0 +1,19 @@
+# Non-secret settings. Safe to share.
+seed: 3217
+kaggle_handle: "ealaxi/paysim1"
+csv_file: "PS_20174392719_1491204439457_log.csv"
+
+# Time windows (steps = hours)
+last_step: 718        # last hour with legitimate traffic; 719-743 is fraud only
+train_end: 408        # train: steps 1-408
+valid_end: 576        # validation: 409-576 (threshold only); holdout: 577-718
+
+scored_types: ["TRANSFER", "CASH_OUT"]
+neg_sample: 0.10      # share of legitimate training rows kept
+
+# Business assumptions
+review_budget_per_day: 200
+review_cost: 1000
+legacy_threshold: 200000
+
+n_jobs: 1

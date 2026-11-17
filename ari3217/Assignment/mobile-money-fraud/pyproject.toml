@@ -1,0 +1,23 @@
+[build-system]
+requires = ["setuptools>=68"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "money_fraud"
+version = "0.1.0"
+requires-python = ">=3.11"
+dependencies = [
+    "pandas>=2.0",
+    "numpy>=1.26",
+    "pyarrow>=14.0",
+    "scikit-learn>=1.4",
+    "lightgbm>=4.0",
+    "networkx>=3.0",
+    "kagglehub>=0.2",
+    "pyyaml>=6.0",
+    "python-dotenv>=1.0",
+    "joblib>=1.3",
+]
+
+[project.optional-dependencies]
+dev = ["pytest>=8.0"]
