@@ -7,7 +7,7 @@ import pyarrow as pa
 import pyarrow.compute as pc
 import pyarrow.csv as pacsv
 
-# hardcoded for now; Stage 3 moves these into config
+# hardcoded for now
 KAGGLE_HANDLE = "ealaxi/paysim1"
 CSV_FILE = "PS_20174392719_1491204439457_log.csv"
 RAW = Path("data/raw/paysim")
