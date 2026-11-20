@@ -10,6 +10,7 @@ from money_fraud.features import GRAPH, add_graph_features, add_time_columns
 from money_fraud.logging_setup import setup_logging
 from money_fraud.model import fit_eval, save_model
 from money_fraud.split import make_split
+from money_fraud.seed import set_seed
 
 logger = logging.getLogger(__name__)
 
@@ -19,6 +20,7 @@ def main():
     setup_logging(os.environ.get("LOG_LEVEL", "INFO"))
     try:
         config = load_config()
+        set_seed(config["seed"])
         raw_dir = os.environ.get("RAW_DIR", config["raw_dir"])
         processed_dir = os.environ.get("PROCESSED_DIR", config["processed_dir"])
         model_path = os.environ.get("MODEL_PATH", config["model_path"])

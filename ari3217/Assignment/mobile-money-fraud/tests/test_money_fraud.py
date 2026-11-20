@@ -108,3 +108,10 @@ def test_training_smoke_and_determinism(train_xy):
     assert len(a) == len(X)
     assert ((a >= 0) & (a <= 1)).all()
     assert a == pytest.approx(b)
+
+def test_zero_amount_cash_out_has_no_chain_link():
+    # PaySim has zero-amount rows; they must not link to a transfer by accident
+    df = pd.DataFrame({"step": [1, 1], "type": ["TRANSFER", "CASH_OUT"], "dest": [1, 2], "amount": [50.0, 0.0]})
+    out = add_graph_features(df)
+    assert out["chain_back"].tolist() == [0, 0]
+    assert np.isfinite(out["dest_prior_amt"].to_numpy()).all()
