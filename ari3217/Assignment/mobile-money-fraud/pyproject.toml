@@ -21,3 +21,6 @@ dependencies = [
 
 [project.optional-dependencies]
 dev = ["pytest>=8.0"]
+
+[project.scripts]
+money-train = "money_fraud.train:main"  

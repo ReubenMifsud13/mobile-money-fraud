@@ -1,3 +1,4 @@
+import logging
 import time
 from pathlib import Path
 
@@ -7,21 +8,15 @@ import pyarrow as pa
 import pyarrow.compute as pc
 import pyarrow.csv as pacsv
 
-# hardcoded for now
-KAGGLE_HANDLE = "ealaxi/paysim1"
-CSV_FILE = "PS_20174392719_1491204439457_log.csv"
-RAW = Path("data/raw/paysim")
-PROCESSED = Path("data/processed")
-RAW.mkdir(parents=True, exist_ok=True)
-PROCESSED.mkdir(parents=True, exist_ok=True)
+logger = logging.getLogger(__name__)
 
 
-def get_raw(filename: str) -> Path:
-    local = RAW / filename
+def get_raw(filename, raw_dir, kaggle_handle):
+    local = Path(raw_dir) / filename
     if local.exists():
         return local
     import kagglehub
-    return Path(kagglehub.dataset_download(KAGGLE_HANDLE, path=filename))
+    return Path(kagglehub.dataset_download(kaggle_handle, path=filename))
 
 
 COLUMN_TYPES = {"step": pa.int16(), "type": pa.dictionary(pa.int32(), pa.string()), "amount": pa.float64(),
@@ -31,12 +26,13 @@ COLUMN_TYPES = {"step": pa.int16(), "type": pa.dictionary(pa.int32(), pa.string(
 BALANCES = ["oldbalanceOrg", "newbalanceOrig", "oldbalanceDest", "newbalanceDest"]
 
 
-def load_paysim() -> pd.DataFrame:
-    cache = PROCESSED / "05_paysim.parquet"
+def load_paysim(raw_dir, processed_dir, csv_file, kaggle_handle):
+    cache = Path(processed_dir) / "05_paysim.parquet"
     if cache.exists():
         return pd.read_parquet(cache)
     t = time.time()
-    tbl = pacsv.read_csv(get_raw(CSV_FILE), convert_options=pacsv.ConvertOptions(column_types=COLUMN_TYPES))
+    tbl = pacsv.read_csv(get_raw(csv_file, raw_dir, kaggle_handle),
+                         convert_options=pacsv.ConvertOptions(column_types=COLUMN_TYPES))
     # ---- governance on load: account names become integer surrogate keys; the names never leave this function ----
     def account_key(col):
         name = tbl[col]
@@ -55,6 +51,7 @@ def load_paysim() -> pd.DataFrame:
                        **{c: np.asarray(tbl[c]) for c in BALANCES},
                        "isFraud": np.asarray(tbl["isFraud"]), "isFlaggedFraud": np.asarray(tbl["isFlaggedFraud"])})
     del tbl, k_orig, k_dest, codes
+    Path(processed_dir).mkdir(parents=True, exist_ok=True)
     df.to_parquet(cache)
-    print(f"loaded + cached in {time.time()-t:.0f}s")
+    logger.info("loaded + cached in %.0fs", time.time() - t)
     return df

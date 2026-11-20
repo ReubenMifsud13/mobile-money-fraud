@@ -3,13 +3,18 @@ seed: 3217
 kaggle_handle: "ealaxi/paysim1"
 csv_file: "PS_20174392719_1491204439457_log.csv"
 
+# Default locations (a .env file or shell variable can override them)
+raw_dir: "data/raw/paysim"
+processed_dir: "data/processed"
+model_path: "models/model.joblib"
+
 # Time windows (steps = hours)
-last_step: 718        # last hour with legitimate traffic; 719-743 is fraud only
-train_end: 408        # train: steps 1-408
-valid_end: 576        # validation: 409-576 (threshold only); holdout: 577-718
+last_step: 718
+train_end: 408
+valid_end: 576
 
 scored_types: ["TRANSFER", "CASH_OUT"]
-neg_sample: 0.10      # share of legitimate training rows kept
+neg_sample: 0.10
 
 # Business assumptions
 review_budget_per_day: 200
