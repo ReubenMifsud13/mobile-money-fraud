@@ -7,6 +7,7 @@ csv_file: "PS_20174392719_1491204439457_log.csv"
 raw_dir: "data/raw/paysim"
 processed_dir: "data/processed"
 model_path: "models/model.joblib"
+state_path: "models/receiver_state.parquet"
 
 # Time windows (steps = hours)
 last_step: 718

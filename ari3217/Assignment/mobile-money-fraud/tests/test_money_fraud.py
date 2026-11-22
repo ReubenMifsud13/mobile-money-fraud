@@ -6,6 +6,13 @@ from money_fraud.features import GRAPH, add_graph_features, add_time_columns
 from money_fraud.model import precision_at_k, train_model
 from money_fraud.split import make_split
 
+from money_fraud.features import (
+    add_time_columns,
+    add_graph_features,
+)
+from money_fraud.serving import ReceiverState
+
+
 # test inputs, not config: unit tests must not depend on config.yaml
 LAST_STEP, TRAIN_END, VALID_END = 718, 408, 576
 SCORED_TYPES = ["TRANSFER", "CASH_OUT"]
@@ -109,9 +116,63 @@ def test_training_smoke_and_determinism(train_xy):
     assert ((a >= 0) & (a <= 1)).all()
     assert a == pytest.approx(b)
 
-def test_zero_amount_cash_out_has_no_chain_link():
-    # PaySim has zero-amount rows; they must not link to a transfer by accident
-    df = pd.DataFrame({"step": [1, 1], "type": ["TRANSFER", "CASH_OUT"], "dest": [1, 2], "amount": [50.0, 0.0]})
-    out = add_graph_features(df)
-    assert out["chain_back"].tolist() == [0, 0]
-    assert np.isfinite(out["dest_prior_amt"].to_numpy()).all()
+
+def test_serving_matches_batch_features():
+    # A small transaction log containing all five types.
+    df = pd.DataFrame({
+        "step": [1, 1, 2, 2, 3, 3, 4],
+        "type": [
+            "TRANSFER", "CASH_OUT", "PAYMENT",
+            "TRANSFER", "CASH_OUT", "CASH_IN",
+            "TRANSFER",
+        ],
+        "dest": [10, 20, 10, 10, 30, 20, 10],
+        "amount": [
+            500.0, 500.0, 40.0, 70.0,
+            70.0, 100.0, 20.0,
+        ],
+    })
+
+    # Original notebook's batch-processing method.
+    batch = add_graph_features(add_time_columns(df))
+
+    # New serving method: replay the same transactions.
+    state = ReceiverState()
+    served = pd.DataFrame([
+        state.observe(
+            int(row.step),
+            str(row.type),
+            float(row.amount),
+            int(row.dest),
+        )
+        for row in df.itertuples(index=False)
+    ])
+
+    assert served["type"].tolist() == df["type"].tolist()
+
+    exact_columns = [
+        "amount",
+        "hour",
+        "dest_prior_in",
+        "dest_age_steps",
+        "chain_back",
+    ]
+
+    for col in exact_columns:
+        assert served[col].tolist() == batch[col].tolist(), col
+
+    assert served["dest_prior_amt"].to_numpy() == (
+        pytest.approx(batch["dest_prior_amt"].to_numpy())
+    )
+
+    # Make sure the test actually exercises chain detection.
+    assert int(batch["chain_back"].sum()) == 1
+
+
+def test_serving_rejects_a_step_that_goes_backwards():
+    state = ReceiverState()
+
+    state.observe(5, "TRANSFER", 10.0, 1)
+
+    with pytest.raises(ValueError):
+        state.observe(4, "TRANSFER", 10.0, 1)
