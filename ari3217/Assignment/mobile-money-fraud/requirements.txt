@@ -43,9 +43,12 @@ pexpect==4.9.0
 pillow==13.0.0
 platformdirs==4.14.5
 pluggy==1.7.0
+prometheus_client==0.26.0
 prompt_toolkit==3.0.53
 protobuf==7.36.2
 psutil==7.2.2
+psycopg==3.3.9
+psycopg-binary==3.3.9
 ptyprocess==0.7.0
 pure_eval==0.2.4
 pyarrow==26.0.1

@@ -6,12 +6,15 @@ from typing import Literal
 import joblib
 import pandas as pd
 from dotenv import load_dotenv
-from fastapi import FastAPI, HTTPException
+from fastapi import FastAPI, HTTPException, Response
 from pydantic import BaseModel, Field
+from prometheus_client import CONTENT_TYPE_LATEST, generate_latest
 
 from money_fraud.config import load_config
 from money_fraud.logging_setup import setup_logging
 from money_fraud.serving import ReceiverState, score
+from money_fraud.db import save_prediction
+from money_fraud.metrics import INPUTS, LATENCY, PREDICTIONS
 
 
 load_dotenv()
@@ -67,6 +70,12 @@ def health():
         "receivers": len(state.accounts),
     }
 
+@app.get("/metrics")
+def metrics():
+    return Response(
+        generate_latest(),
+        media_type=CONTENT_TYPE_LATEST,
+    )
 
 @app.post("/score")
 def score_transaction(tx: Transaction):
@@ -83,18 +92,42 @@ def score_transaction(tx: Transaction):
             detail=str(error),
         ) from error
 
+    # Only TRANSFER and CASH_OUT receive fraud scores.
     if tx.type not in config["scored_types"]:
+
+        save_prediction(
+            tx.step,
+            tx.type,
+            tx.amount,
+            tx.dest,
+            None,
+            MODEL_VERSION,
+        )
+
         return {
             "scored": False,
             "probability_fraud": None,
             "model_version": MODEL_VERSION,
         }
 
-    probability = score(
-        model,
-        feats,
-        config["scored_types"],
-    )
+    with LATENCY.time():
+        probability = score(
+            model,
+            feats,
+            config["scored_types"],
+        )
+
+        save_prediction(
+            tx.step,
+            tx.type,
+            tx.amount,
+            tx.dest,
+            probability,
+            MODEL_VERSION,
+        )
+
+    PREDICTIONS.inc()
+    INPUTS.observe(tx.amount)
 
     logger.info(
         "step=%d type=%s amount=%.2f probability=%.4f",

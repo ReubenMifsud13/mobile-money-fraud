@@ -15,11 +15,11 @@ from money_fraud.serving import ReceiverState, score
 
 
 def main():
-    # 1. Read the project configuration.
+    # Read the project configuration.
     with open("config/config.yaml") as f:
         cfg = yaml.safe_load(f)
 
-    # 2. Load the existing processed PaySim dataset.
+    # Load the existing processed PaySim dataset.
     cache = Path(cfg["processed_dir"]) / "05_paysim.parquet"
 
     if not cache.exists():
@@ -34,17 +34,17 @@ def main():
 
     print("Dataset loaded:", len(tx), "rows")
 
-    # 3. Calculate features using the original batch method.
+    # Calculate features using the original batch method.
     batch = add_graph_features(add_time_columns(tx))
 
-    # 4. Build history up to the end of validation.
+    # Build history up to the end of validation.
     history = batch[
         batch.step <= cfg["valid_end"]
     ]
 
     state = ReceiverState.from_history(history)
 
-    # 5. Replay the holdout in chronological order.
+    # Replay the holdout in chronological order.
     live = batch[
         (batch.step > cfg["valid_end"])
         & (batch.step <= cfg["last_step"])

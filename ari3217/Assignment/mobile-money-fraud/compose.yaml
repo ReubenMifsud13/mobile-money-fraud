@@ -1,0 +1,39 @@
+include:
+  - monitoring/compose.yaml
+  
+services:
+  db:
+    image: postgres:18
+
+    environment:
+      POSTGRES_USER: money
+      POSTGRES_PASSWORD: ${DB_PASSWORD}
+      POSTGRES_DB: money
+
+    volumes:
+      - db-data:/var/lib/postgresql
+      - ./db/init.sql:/docker-entrypoint-initdb.d/init.sql:ro
+
+    healthcheck:
+      test: ["CMD", "pg_isready", "-U", "money", "-d", "money"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+
+  api:
+    build: .
+    image: money-fraud:0.3
+
+    ports:
+      - "8888:8888"
+
+    environment:
+      MODEL_VERSION: "0.3"
+      DATABASE_URL: postgresql://money:${DB_PASSWORD}@db:5432/money
+
+    depends_on:
+      db:
+        condition: service_healthy
+
+volumes:
+  db-data:
